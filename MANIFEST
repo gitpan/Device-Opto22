@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Device-Opto22.t
+lib/Device/Opto22.pm
