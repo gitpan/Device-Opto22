@@ -4,3 +4,4 @@ MANIFEST
 README
 t/Device-Opto22.t
 lib/Device/Opto22.pm
+META.yml                                 Module meta-data (added by MakeMaker)

@@ -19,7 +19,7 @@ our @EXPORT_OK = qw( send_PUC get_scratchpadint get_scratchpadfloat get_eu_lst g
 
 our @EXPORT = qw( );
 
-our $VERSION = '0.901';
+our $VERSION = '0.91';
 
 ################################################33
 # Opto22 Specific commands
@@ -318,53 +318,112 @@ Device::Opto22 - Perl Object to communicate with Opto22 Brains via Memory-mapped
 
 =head1 SYNOPSIS
 
-  use Device::Opto22;
-  
-  my $brain_ip = '192.168.1.7';
-
-  my $sock  = new Device::Opto22( PeerAddr => "$brain_ip",PeerPort => '2001' );
-
-  my $rtn = $sock->send_PUC();
-
-  # Read Opto22 scratch pad tables
-  my $int_table_sz = 15;     # number of entries to read in integer scratch pad table
-  my $flt_table_sz = 18;     # number of entries to read in float scratch pad table
-
-  my @int_lst = $sock->get_scratchpadint($int_table_sz);
-
-  my @flt_lst = $sock->get_scratchpadfloat($flt_table_sz);
+	use Device::Opto22;
+	
+	my $brain_ip = '192.168.1.7';
+		
+	my $sock  = new Device::Opto22( PeerAddr => "$brain_ip",PeerPort => '2001' );
+	
+	my $rtn = $sock->send_PUC();
+	
+	# Read Opto22 scratch pad tables
+	my $int_table_sz = 15;     # number of entries to read in integer scratch pad table
+	my $flt_table_sz = 18;     # number of entries to read in float scratch pad table
+	
+	my @int_lst = $sock->get_scratchpadint($int_table_sz);
+	
+	my @flt_lst = $sock->get_scratchpadfloat($flt_table_sz);
 
 =head1 DESCRIPTION
 
 This Module communicates with an Opto22 Brain/Controller via OptoMMP a memory-mapped protocol 
 based on the IEEE 1394 standard. This module can be used to create custom software applications 
-for remote monitoring, industrial control, and data acquisition using Opto modular components
+for remote monitoring, industrial control, and data acquisition using Opto22 modular components.
+
+There is an underlying Firewire.pm module that is used. 
+
+=head1 Methods
 
 Methods include: 
 
-=over 4
-=item * send_PUC             - Send Power Up Control 
- 
-=item * get_scratchpadint    - Get Integer Scratchpad
- 
-=item * get_scratchpadfloat  - Get Floating Scratchpad 
+=over
 
-=item * get_eu_lst           - Get Analog Bank Data in Engineering Units
+=item  * send_PUC()
 
-=item * get_digital_lst      - Get Digital Bank Data 
+Send Power Up Control 
 
-=item * wr_digital_pnt       - Write digital point    
+	my $rtn = $sock->send_PUC();
 
-=item * serial_chat          - Send received data to serial module
+Returns 1 on success and nothing on failure
+
+=item  * get_scratchpadint()
+
+=item  * get_scratchpadfloat()
+
+
+Get Integer/Float Scratchpads
+
+	my @lst = $sock->get_scractchpading($number_of_items_get);
+
+Returns a list of items requested or nothing on failure	
+
+=item * get_eu_lst()
+
+Get Analog Bank Data in Engineering Units
+
+	my @eu_lst  = $sock->get_eu_lst() 
+
+Returns list of measured engineering unit values in memory map and nothing on failure 	
+	
+
+=item * get_digital_lst()
+
+Get Digital Bank Data 
+
+	my @dig_lst = $sock->get_digital_lst()
+
+Returns all list of all 64 digital points. Nothing of failure. 
+
+
+
+=item * wr_digital_pnt
+
+
+
+Write digital point    
+
+	$sock->wr_digital_pnt($opto_chnl,$turn_on) 
+
+Inputs are channel to effect and a true value for $turn_on  to activate channel or nothing to 
+turn channel off. 	
+
+
+
+=item * serial_chat(@data)
+
+
+=item * serial_send($data)
+
+=item * serial_rcv()
+
+    Send and/or Receive data from serial module 
+
+	$sock->serial_send("*0100DB\r\n");     # ask for data in the pressure sensor buffer
+	my $engr_value = $sock->serial_rcv();  # rcv buffer data
+	
+Communicate to the serial device. Note you will have to send \r\n characters if needed. 
+
+=item * error_msg
+
+Get error message on failure 
+
+    unless ( $rtn ) { die $sock->error_msg; } 
 
 =back
 
 Note: The Opto22 Brains are in Big-endian format. The module translates this into common Little-endian format. 
 If you are trying this module out on a Big-endian machine you will need to edit the source code as required. 
 
-=head2 EXPORT
-
-None by default.
 
 =head1 SEE ALSO
 
@@ -377,7 +436,7 @@ http://perlworks.com
 
 =head1 AUTHOR
 
-Written and maintained by: Duane Nightingale and Steve Troxel
+Written and maintained by: Steve Troxel and Duane Nightingale
 (email troxel "at" perlworks.com)
 
 =head1 COPYRIGHT AND LICENSE
