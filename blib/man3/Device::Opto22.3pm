@@ -129,41 +129,82 @@
 .\" ========================================================================
 .\"
 .IX Title "Device::Opto22 3"
-.TH Device::Opto22 3 "2010-03-10" "perl v5.8.8" "User Contributed Perl Documentation"
+.TH Device::Opto22 3 "2010-03-11" "perl v5.8.8" "User Contributed Perl Documentation"
 .SH "NAME"
-Device::Opto22 \- Perl extension for blah blah blah
+Device::Opto22 \- Perl Object to communicate with Opto22 Brains via Memory\-mapped protocol 
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
-.Vb 2
+.Vb 1
 \&  use Device::Opto22;
-\&  blah blah blah
+.Ve
+.PP
+.Vb 1
+\&  my $brain_ip = '192.168.1.7';
+.Ve
+.PP
+.Vb 1
+\&  my $sock  = new Device::Opto22( PeerAddr => "$brain_ip",PeerPort => '2001' );
+.Ve
+.PP
+.Vb 1
+\&  my $rtn = $sock->send_PUC();
+.Ve
+.PP
+.Vb 3
+\&  # Read Opto22 scratch pad tables
+\&  my $int_table_sz = 15;     # number of entries to read in integer scratch pad table
+\&  my $flt_table_sz = 18;     # number of entries to read in float scratch pad table
+.Ve
+.PP
+.Vb 1
+\&  my @int_lst = $sock->get_scratchpadint($int_table_sz);
+.Ve
+.PP
+.Vb 1
+\&  my @flt_lst = $sock->get_scratchpadfloat($flt_table_sz);
 .Ve
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
-Stub documentation for Device::Opto22, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This Module communicates with an Opto22 Brain/Controller via OptoMMP a memory-mapped protocol 
+based on the \s-1IEEE\s0 1394 standard. This module can be used to create custom software applications 
+for remote monitoring, industrial control, and data acquisition using Opto modular components
 .PP
-Blah blah blah.
+Methods include: 
+.IP "* get_scratchpadint    \- Get Integer Scratchpad" 4
+.IX Item "get_scratchpadint    - Get Integer Scratchpad"
+.PD 0
+.IP "* get_scratchpadfloat  \- Get Floating Scratchpad" 4
+.IX Item "get_scratchpadfloat  - Get Floating Scratchpad"
+.IP "* get_eu_lst           \- Get Analog Bank Data in Engineering Units" 4
+.IX Item "get_eu_lst           - Get Analog Bank Data in Engineering Units"
+.IP "* get_digital_lst      \- Get Digital Bank Data" 4
+.IX Item "get_digital_lst      - Get Digital Bank Data"
+.IP "* wr_digital_pnt       \- Write digital point" 4
+.IX Item "wr_digital_pnt       - Write digital point"
+.IP "* serial_chat          \- Send received data to serial module" 4
+.IX Item "serial_chat          - Send received data to serial module"
+.PD
+.PP
+Note: The Opto22 Brains are in Big-endian format. The module translates this into common Little-endian format. 
+If you are trying this module out on a Big-endian machine you will need to edit the source code as required. 
 .Sh "\s-1EXPORT\s0"
 .IX Subsection "EXPORT"
 None by default.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in \s-1UNIX\s0), or any relevant external documentation such as RFCs or
-standards.
+For more detailed information on Opto22 components and OptoMMP see... 
 .PP
-If you have a mailing list set up for your module, mention it here.
+http://www.opto22.com/documents/1465_OptoMMP_Protocol_Guide.pdf
+http://www.opto22.com
 .PP
-If you have a web site set up for your module, mention it here.
+http://perlworks.com
 .SH "AUTHOR"
 .IX Header "AUTHOR"
-root, <root@localdomain>
+Written and maintained by: Duane Nightingale and Steve Troxel
+(email troxel \*(L"at\*(R" perlworks.com)
 .SH "COPYRIGHT AND LICENSE"
 .IX Header "COPYRIGHT AND LICENSE"
-Copyright (C) 2010 by root
+Copyright (C) 2010
 .PP
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,

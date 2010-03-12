@@ -19,9 +19,7 @@ our @EXPORT_OK = qw( send_PUC get_scratchpadint get_scratchpadfloat get_eu_lst g
 
 our @EXPORT = qw( );
 
-our $VERSION = '0.90';
-
-our $error_msg; 
+our $VERSION = '0.901';
 
 ################################################33
 # Opto22 Specific commands
@@ -42,24 +40,22 @@ sub new {
     }
 
     # This establishes a SENDER socket connection OK
-    my $root = new Device::Opto22::Firewire (PeerAddr => $PeerAddr ,
+    my $self = new Device::Opto22::Firewire (PeerAddr => $PeerAddr ,
                           PeerPort => $PeerPort );
 
-    if ( not($root))  {
-	    die "Error connecting in Package $class" ;
-    }
-	
-    bless  $root;
+    unless ( $self ) { die "Error connecting in Package $class" ; }
 
-    return $root;
+    bless  $self, $class;
+
+    return $self;
 }
 
 sub send_PUC {
 
-  my ($class) = @_;
+  my ($self) = @_;
 
-  my $packet = $class->bld_wr_quad_packet(0xf0380000,0x00000001);
-  my $rsp    = $class->chat($packet);
+  my $packet = $self->bld_wr_quad_packet(0xf0380000,0x00000001);
+  my $rsp    = $self->chat($packet);
 
   return ($rsp) ;
 }
@@ -67,10 +63,10 @@ sub send_PUC {
 # Does not work... not sure what to send ... 
 sub send_MMap_ver {
 
-  my ($class) = @_;
+  my ($self) = @_;
 
-  my $packet = $class->bld_wr_quad_packet(0xf0300000,0x00000000);
-  my $rsp    = $class->chat($packet);
+  my $packet = $self->bld_wr_quad_packet(0xf0300000,0x00000000);
+  my $rsp    = $self->chat($packet);
 
   return ($rsp) ;
 }
@@ -82,12 +78,12 @@ sub send_MMap_ver {
 #-------------------------------------------
 sub get_scratchpadint {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
   my ($len) = shift @_;   # how many ints to get
   
-  my $packet  = $class->bld_rd_blk_packet(0xF0D81000,4*$len);
+  my $packet  = $self->bld_rd_blk_packet(0xF0D81000,4*$len);
 
-  my $data    = $class->chat($packet);
+  my $data    = $self->chat($packet);
 
   my @lst = big2little_int($data);
 
@@ -102,12 +98,12 @@ sub get_scratchpadint {
 #-------------------------------------------
 sub get_scratchpadfloat {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
   my ($len) = shift @_;   # how many ints to get
 
-  my $packet  = $class->bld_rd_blk_packet(0xF0D82000,4*$len);
+  my $packet  = $self->bld_rd_blk_packet(0xF0D82000,4*$len);
 
-  my $data    = $class->chat($packet);
+  my $data    = $self->chat($packet);
 
   my @lst = big2little_fp($data);
 
@@ -116,11 +112,11 @@ sub get_scratchpadfloat {
 
 sub get_eu_lst {
 
-  my ($class) = @_;
+  my ($self) = @_;
 
-  my $packet  = $class->bld_rd_blk_packet(0xf0600000,256);
+  my $packet  = $self->bld_rd_blk_packet(0xf0600000,256);
 
-  my $data    = $class->chat($packet);
+  my $data    = $self->chat($packet);
 
   my @lst = big2little_fp($data);
 
@@ -129,11 +125,11 @@ sub get_eu_lst {
 
 sub get_digital_lst {
 
-  my ($class) = @_;
+  my ($self) = @_;
 
-  my $packet  = $class->bld_rd_blk_packet(0xf0400000,8);
+  my $packet  = $self->bld_rd_blk_packet(0xf0400000,8);
 
-  my $data    = $class->chat($packet);
+  my $data    = $self->chat($packet);
 
   # Place 0 or 1 in each element of an array
   my @lst = split // , unpack  "B64" , $data ;
@@ -145,7 +141,7 @@ sub get_digital_lst {
 
 sub wr_digital_pnt {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
 
   my ($channel, $data) = @_;
 
@@ -157,9 +153,9 @@ sub wr_digital_pnt {
   # The set/clr byte are next to each other
   if (  not($data)  ) { $offset = $offset + 4 ; }
 
-  my $packet  = $class->bld_wr_quad_packet($offset, "1");
+  my $packet  = $self->bld_wr_quad_packet($offset, "1");
 
-  my $rtn = $class->chat($packet);
+  my $rtn = $self->chat($packet);
 
   return ($rtn) ;
 }
@@ -168,12 +164,12 @@ sub wr_digital_pnt {
 #----------------------------------------------------------
 # serial_chat() - sends and rcvs on open Opto serial port
 #
-# NOTE:  The class object must have opened a socket on
+# NOTE:  The self object must have opened a socket on
 # a port that maps to a particular Opto serial module.
 #----------------------------------------------------------
 sub serial_chat {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
 
   my ($data) = @_;
 
@@ -184,22 +180,21 @@ sub serial_chat {
 
      alarm ($timeout) ;
 
-     print $class $data;
+     print $self $data;
 
      # Wait for data
      select(undef,undef,undef,0.5);
 
-     $cnt = $class->recv($rsp, 30, 0 ) ;
+     $cnt = $self->recv($rsp, 30, 0 ) ;
 
      alarm(0);
 
   };
 
-  if (not ($cnt))  {
-       $error_msg = "Nothing returned in Serial Chat\n$!\n" ;
-       return 0 ;
+  if (not ($cnt)) {
+      ${*$self}->{'error_msg'} = "Nothing returned in Serial Chat"; 
+       return 0;
   }else{
-
        return ($rsp) ;
   }
 }
@@ -207,12 +202,12 @@ sub serial_chat {
 #----------------------------------------------------------
 # serial_send() - sends to an open Opto serial port
 #
-# NOTE:  The class object must have opened a socket on
+# NOTE:  The self object must have opened a socket on
 # a port that maps to a particular Opto serial module.
 #----------------------------------------------------------
 sub serial_send {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
 
   my ($data) = @_;
 
@@ -220,7 +215,7 @@ sub serial_send {
 
      alarm ($timeout) ;
 
-     print $class $data;
+     print $self $data;
 
      alarm(0);
 
@@ -233,12 +228,12 @@ sub serial_send {
 #----------------------------------------------------------
 # serial_rcv- rcvs on an open Opto serial port
 #
-# NOTE:  The class object must have opened a socket on
+# NOTE:  The self object must have opened a socket on
 # a port that maps to a particular Opto serial module.
 #----------------------------------------------------------
 sub serial_rcv {
 
-  my ($class) = shift @_;
+  my ($self) = shift @_;
 
   my $rsp ;
 
@@ -246,7 +241,7 @@ sub serial_rcv {
 
      alarm ($timeout) ;
 
-     $rsp = <$class>;   # blocks until newline terminated
+     $rsp = <$self>;   # blocks until newline terminated
 
      alarm(0);
 
@@ -258,9 +253,8 @@ sub serial_rcv {
 
     return($rsp);
 
- }else{
-
-    $error_msg = "Bad data received in serial_rcv ($rsp)\n$!\n" ;
+	}else{
+     ${*$self}->{'error_msg'} = "Bad data received in serial_rcv ($rsp)\n$!\n" ;
     return(0);
  }
 }
@@ -317,49 +311,78 @@ return @lst ;
 
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
-Device::Opto22 - Perl extension for blah blah blah
+Device::Opto22 - Perl Object to communicate with Opto22 Brains via Memory-mapped protocol 
 
 =head1 SYNOPSIS
 
   use Device::Opto22;
-  blah blah blah
+  
+  my $brain_ip = '192.168.1.7';
+
+  my $sock  = new Device::Opto22( PeerAddr => "$brain_ip",PeerPort => '2001' );
+
+  my $rtn = $sock->send_PUC();
+
+  # Read Opto22 scratch pad tables
+  my $int_table_sz = 15;     # number of entries to read in integer scratch pad table
+  my $flt_table_sz = 18;     # number of entries to read in float scratch pad table
+
+  my @int_lst = $sock->get_scratchpadint($int_table_sz);
+
+  my @flt_lst = $sock->get_scratchpadfloat($flt_table_sz);
 
 =head1 DESCRIPTION
 
-Stub documentation for Device::Opto22, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This Module communicates with an Opto22 Brain/Controller via OptoMMP a memory-mapped protocol 
+based on the IEEE 1394 standard. This module can be used to create custom software applications 
+for remote monitoring, industrial control, and data acquisition using Opto modular components
 
-Blah blah blah.
+Methods include: 
+
+=over 4
+=item * send_PUC             - Send Power Up Control 
+ 
+=item * get_scratchpadint    - Get Integer Scratchpad
+ 
+=item * get_scratchpadfloat  - Get Floating Scratchpad 
+
+=item * get_eu_lst           - Get Analog Bank Data in Engineering Units
+
+=item * get_digital_lst      - Get Digital Bank Data 
+
+=item * wr_digital_pnt       - Write digital point    
+
+=item * serial_chat          - Send received data to serial module
+
+=back
+
+Note: The Opto22 Brains are in Big-endian format. The module translates this into common Little-endian format. 
+If you are trying this module out on a Big-endian machine you will need to edit the source code as required. 
 
 =head2 EXPORT
 
 None by default.
 
-
-
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
+For more detailed information on Opto22 components and OptoMMP see... 
 
-If you have a mailing list set up for your module, mention it here.
+http://www.opto22.com/documents/1465_OptoMMP_Protocol_Guide.pdf
+http://www.opto22.com
 
-If you have a web site set up for your module, mention it here.
+http://perlworks.com
 
 =head1 AUTHOR
 
-root, E<lt>root@localdomainE<gt>
+Written and maintained by: Duane Nightingale and Steve Troxel
+(email troxel "at" perlworks.com)
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by root
+Copyright (C) 2010
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,

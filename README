@@ -1,40 +1,32 @@
 Device-Opto22 version 0.01
 ==========================
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+WHAT IS THIS?
 
-A README file is required for CPAN modules since CPAN extracts the
-README file from a module distribution so that people browsing the
-archive can use it get an idea of the modules uses. It is usually a
-good idea to provide version information here so that people can
-decide whether fixes for the module are worth downloading.
+A simple module to communicate and control Opto22 Brains via a Memory Mapped Protocol.
+Opto22 makes a complete line of industrial IO modules.  
 
-INSTALLATION
+HOW DO I INSTALL IT?
 
-To install this module type the following:
+To install this module, cd to the directory that contains this README
+file and type the following:
 
    perl Makefile.PL
    make
    make test
    make install
 
-DEPENDENCIES
+WHAT SYSTEMS DOES IT WORK WITH?
 
-This module requires these other modules and libraries:
+This module has been used on Linux servers on INTEL/AMD servers. May work 
+under Windows or other O/S but I have not tested on these. 
 
-  blah blah blah
+WHERE ARE THE EXAMPLES?
 
-COPYRIGHT AND LICENCE
+I have source code available for samples. If you need this contact me. 
+http://perlworks.com
 
-Put the correct copyright and licence information here.
+IMPORTANT NOTES:
 
-Copyright (C) 2010 by root
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.8.8 or,
-at your option, any later version of Perl 5 you may have available.
-
+....
 

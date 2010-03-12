@@ -1,5 +1,8 @@
 package Device::Opto22::Firewire;
 
+use strict;
+use warnings;
+
 use IO::Socket;
 use IO::Select;
 use POSIX;
@@ -8,7 +11,7 @@ our @ISA = qw(IO::Socket);
 
 our @EXPORT_OK = ( );
 
-our @EXPORT = qw( 0chat bld_rd_quad_packet bld_wr_quad_packet bld_rd_blk_packet bld_wr_blk_packet dump_quadlet ); 
+our @EXPORT = qw( ); 
 
 our $VERSION = '0.90';
 
@@ -27,39 +30,37 @@ our $TC_WR_RSP     = 2;
 our $TC_RD_BLK_RSP  = 6;
 our $TC_RD_QUAD_RSP = 7;
 
-our $timeout = 5;
-our $error_msg; 
+our $timeout = 5; 
 
 sub new {
 
     my $class = shift @_;
-    %args     = @_;
 
-    $PeerAddr = $args{PeerAddr} ;
-    $PeerPort = $args{PeerPort} ;
+	my %args = @_; 
+	
+    my $PeerAddr = $args{PeerAddr};
+    my $PeerPort = $args{PeerPort};
 
-    if (not ($PeerAddr && $PeerPort) )  {
-          $error_msg = "Inputs missing in Package $class Addr = $PeerAddr, Port = $PeerPort" ;
-          return 0 ;
+    if (not ($PeerAddr && $PeerPort) )	{
+          die "Inputs missing in Package $class. Require PeerAddr and PeerPort";
     }
 
-
     # This establishes a SENDER socket connection OK
-    $root = new IO::Socket::INET (PeerAddr => $PeerAddr ,
+    my $self = new IO::Socket::INET (PeerAddr => $PeerAddr ,
                                        PeerPort => $PeerPort ,
                                        Proto    => 'tcp',
                                        Timeout  => $timeout );
 
-    if ( not($root))  {
-          $error_msg = "Error Socket Connecting" ;
-          return 0 ;
-    }
-
+    unless ( $self ) { die "Error Socket Connecting" }
+	
+	# Init a error message
+	${*$self}->{'error_msg'} = ""; 
+	
     $SIG{ALRM} = \&_time_out ;
 
-    bless  $root;
+    bless  $self, $class;
 
-    return $root;
+    return $self;
 }
 
 #----------------------------------------------------------------------
@@ -73,7 +74,7 @@ sub new {
 
 sub chat {
 
-  my ($class, $packet) = @_;
+  my ($self, $packet) = @_;
   
   my ($rsp,$cnt);
 
@@ -81,28 +82,29 @@ sub chat {
 
      alarm ($timeout) ;
 
-     print $class $packet;
-     $cnt = $class->recv($rsp, 300, 0 ) ;
+     print $self $packet;
+     $cnt = $self->recv($rsp, 300, 0 ) ;
      alarm(0);
   };
 
   unless ( length($rsp) )  
   {
-          $error_msg = "$@ - Nothing returned in Chat\n$!\n" ;
+          ${*$self}->{'error_msg'} = "$@ - Nothing returned in Chat" ;
           return 0 ;
   }
 
   # Split response
-  my $header  = substr $rsp, 0 , 16 ;
-  my $payload = substr $rsp, 16     ;
+  my $header  = substr $rsp, 0 , 16;
+  my $payload;
+  if ( length($rsp) >= 16 ) { $payload = substr $rsp, 16 }
+  
+  my @header_lst = unpack ("C8", $header ) ;
 
-  @header_lst = unpack ("C8", $header ) ;
-
-  $tcode = $header_lst[3] >> 4 ;
-  $rcode = $header_lst[6] >> 4 ;
+  my $tcode = $header_lst[3] >> 4 ;
+  my $rcode = $header_lst[6] >> 4 ;
 
   if ($rcode) {
-    $error_msg = "oh oh we got a NAK in Chat \n$!\n" ;
+    ${*$self}->{'error_msg'} = "oh oh we got a NAK in Chat" ;
     return 0 ;
   }
 
@@ -121,20 +123,20 @@ sub chat {
 
 sub bld_rd_quad_packet {
 
-  ($class, $offset) = @_;
+  my ($self, $offset) = @_;
 
-  $src_id = 0 ;
+  my $src_id = 0;
 
-  $trans += 1; # global variable
+  my $trans += 1; # global variable
 
-  $dest_id = 0;                      # Destination ID
+  my $dest_id = 0;                      # Destination ID
 
-  $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
-  $tcode   = $TC_RD_QUAD_RQST << 4;  # Bit shift over the unused priority bits
+  my $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
+  my $tcode   = $TC_RD_QUAD_RQST << 4;  # Bit shift over the unused priority bits
 
-  $fixed = 0xffff ;     # fixed area of address
+  my $fixed = 0xffff ;     # fixed area of address
 
-  $packet = pack "ncc n2 N N", $dest_id, $tl, $tcode, $src_id, $fixed, $offset ;
+  my $packet = pack "ncc n2 N N", $dest_id, $tl, $tcode, $src_id, $fixed, $offset ;
 
   return $packet;
 
@@ -151,23 +153,19 @@ sub bld_rd_quad_packet {
 
 sub bld_wr_quad_packet {
 
-  my %args = @_ ;
+  my ($self, $offset, $data) = @_;
 
-  ($class, $offset, $data) = @_;
+  my $trans += 1; # global variable
 
-  $trans += 1; # global variable
+  my $src_id = 0  ;
 
-  $src_id = 0  ;
+  my $dest_id = 0;                      # Destination ID
+  my $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
+  my $tcode   = $TC_WR_QUAD_RQST << 4;  # Bit shift over the unused priority bits
 
-  $dest_id = 0;                      # Destination ID
-  $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
-  $tcode   = $TC_WR_QUAD_RQST << 4;  # Bit shift over the unused priority bits
+  my $fixed = 0xffff ;     # fixed area of address
 
-  $fixed = 0xffff ;     # fixed area of address
-
-
-
-  $packet = pack "ncc n2 N N", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $data;
+  my $packet = pack "ncc n2 N N", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $data;
 
   return $packet;
 
@@ -184,23 +182,21 @@ sub bld_wr_quad_packet {
 
 sub bld_rd_blk_packet {
 
-  my %args = @_ ;
+  my ($self, $offset, $length) = @_;
 
-  ($class, $offset, $length) = @_;
+  my $trans += 1; # global variable
 
-  $trans += 1; # global variable
+  my $src_id = 0  ;
 
-  $src_id = 0  ;
+  my $dest_id = 0;                      # Destination ID
+  my $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
+  my $tcode   = $TC_RD_BLK_RQST  << 4;  # Bit shift over the unused priority bits
 
-  $dest_id = 0;                      # Destination ID
-  $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
-  $tcode   = $TC_RD_BLK_RQST  << 4;  # Bit shift over the unused priority bits
-
-  $fixed = 0xffff ;     # fixed area of address
+  my $fixed = 0xffff ;     # fixed area of address
 
   $length = $length << 16 ;
 
-  $packet = pack "ncc n2 N2", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $length ;
+  my $packet = pack "ncc n2 N2", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $length ;
 
   return $packet;
 
@@ -217,32 +213,37 @@ sub bld_rd_blk_packet {
 
 sub bld_wr_blk_packet {
 
-  my %args = @_ ;
+  my ($self, $offset, $length) = @_;
 
-  ($class, $offset, $length) = @_;
+  my $trans += 1; # global variable
 
-  $trans += 1; # global variable
+  my $src_id = 0  ;
 
-  $src_id = 0  ;
+  my $dest_id = 0;                      # Destination ID
+  my $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
+  my $tcode   = $TC_WR_BLK_RQST  << 4;  # Bit shift over the unused priority bits
 
-  $dest_id = 0;                      # Destination ID
-  $tl      = ($trans & 0x3f)  << 2;  # Transaction Label (shifted to set retry bits to 00)
-  $tcode   = $TC_WR_BLK_RQST  << 4;  # Bit shift over the unused priority bits
-
-  $fixed = 0xffff ;                  # fixed area of address
+  my $fixed = 0xffff ;                  # fixed area of address
 
   $length = $length << 16 ;
 
-  $packet = pack "ncc n2 N2", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $length ;
+  my $packet = pack "ncc n2 N2", $dest_id, $tl, $tcode, $src_id, $fixed, $offset, $length ;
 
   return $packet;
 
 }
 
+# Report error message 
+sub error_msg
+{
+ my $self = shift @_;
+ return ${*$self}->{'error_msg'};
+}
+
+
 #------------------
 # Private Functions
 #------------------
-
 sub _time_out {
 
  die "Error Time Out" ;
@@ -258,7 +259,7 @@ sub dump_quadlet
  my $len = length($data); 
  print "Length $len\n"; 
  
- @lst = split // , unpack  "B128" , $data ;
+ my @lst = split // , unpack  "B128" , $data ;
 
  my $cnt;
  foreach my $b (@lst) 
