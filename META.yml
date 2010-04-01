@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Device-Opto22
-version:            0.91
+version:            0.92
 abstract:           Perl Object to communicate with Opto22 Brains via Memory-mapped protocol 
 author:
     - root <root@localdomain>

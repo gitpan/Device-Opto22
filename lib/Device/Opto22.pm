@@ -19,7 +19,7 @@ our @EXPORT_OK = qw( send_PUC get_scratchpadint get_scratchpadfloat get_eu_lst g
 
 our @EXPORT = qw( );
 
-our $VERSION = '0.91';
+our $VERSION = '0.92';
 
 ################################################33
 # Opto22 Specific commands

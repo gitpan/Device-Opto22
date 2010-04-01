@@ -4,4 +4,5 @@ MANIFEST
 README
 t/Device-Opto22.t
 lib/Device/Opto22.pm
+lib/Device/Opto22/Firewire.pm
 META.yml                                 Module meta-data (added by MakeMaker)
